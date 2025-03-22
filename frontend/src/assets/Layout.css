@@ -1,0 +1,53 @@
+/* Root variables for consistency and easy maintenance */
+:root {
+  --padding-base: clamp(0.75rem, 2vw, 1.25rem); /* Responsive padding */
+  --transition: all 0.3s ease-in-out; /* Smooth transitions */
+}
+
+/* Layout container - commented out but optimized if needed */
+/* 
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Changed from height to min-height for content overflow */
+*/
+
+/* Main content area */
+.main-content {
+  display: flex;
+  flex: 1; /* Takes available space */
+  width: 100%; /* Ensures full width */
+}
+
+/* Page content */
+.page-content {
+  flex-grow: 1; /* Expands to fill available space */
+  padding: var(--padding-base); /* Responsive padding */
+  overflow-y: auto; /* Scrollable content if needed */
+  transition: var(--transition); /* Smooth resizing with sidebar toggle */
+  background: #fff; /* Added default background for consistency */
+  min-width: 0; /* Prevents flex shrinkage issues */
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .main-content {
+    flex-direction: column; /* Stack vertically on medium screens */
+  }
+
+  .page-content {
+    padding: calc(var(--padding-base) * 0.8); /* Slightly reduced padding */
+  }
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding: calc(var(--padding-base) * 0.6); /* Further reduced padding */
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding: calc(var(--padding-base) * 0.4); /* Minimal padding on small screens */
+  }
+}
