@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import "../assets/Checkout.css";
 import axios from "axios";
-import axios from "axios";
+
 function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,7 +28,7 @@ function Checkout() {
       setLoading(false);
     }
   };
-  // Handle Send via SMS by calling the backend API
+
   // Handle Send via SMS by calling the deployed backend API
   const handleSendSMS = async () => {
     if (!customer || !customer.phone) {
@@ -46,8 +46,6 @@ function Checkout() {
     try {
       const phoneNumber = `+91${customer.phone}`; // Adjust country code as needed (e.g., +91 for India)
 
-      // Call the backend API to send SMS
-      const response = await axios.post("http://localhost:5000/send-sms", {
       // Use environment variable for the backend URL
       const backendUrl = process.env.REACT_APP_BACKEND_URL || "https://billingo.onrender.com";
       const response = await axios.post(`${backendUrl}/send-sms`, {
