@@ -24,6 +24,9 @@ if (missingEnvVars.length > 0) {
 const app = express();
 const port = process.env.PORT || 5000; // Use Render's assigned port
 
+// Enable trust proxy to handle X-Forwarded-For header correctly
+app.set("trust proxy", 1); // Trust the first proxy (Render)
+
 // Configure logging with winston
 const logger = winston.createLogger({
   level: "info",
