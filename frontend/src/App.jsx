@@ -9,7 +9,9 @@ import EditProfile from "./pages/EditProfile";
 import Products from "./pages/products";
 import Home from "./pages/Home"; // ✅ Imported Home Component
 import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout"
+import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import Customers from "./pages/Customer";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
@@ -45,6 +47,8 @@ function App() {
       <Route path="/products" element={user ? <Products /> : <Navigate to="/login" />} />
       <Route path="/cart" element={user ? <Cart /> : <Navigate to="/login" />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/orders" element={<Orders />} />
+      <Route path="/customers" element={<Customers />} />
       
       {/* ✅ Default Redirect */}
       <Route path="*" element={<Navigate to={user ? "/home" : "/login"} />} />

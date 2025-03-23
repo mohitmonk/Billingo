@@ -1,17 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "../config/firebase";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore"; // Added doc and updateDoc
+import { collection, getDocs, doc, updateDoc, addDoc } from "firebase/firestore";
 import "../assets/Dashboard.css";
+import html2canvas from "html2canvas";
 import Layout from "../components/Layout";
 import { useNavigate } from "react-router-dom";
-import { FaUserCircle, FaBars, FaShoppingCart } from "react-icons/fa";
-import { toast } from "react-toastify"; // Added toast for error/success messages
+import { FaShoppingCart } from "react-icons/fa";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 function Dashboard() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const billRef = useRef();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -36,7 +43,6 @@ function Dashboard() {
     const selectedSize = product.selectedSize;
     const sizeDetails = product.sizes[selectedSize];
 
-    // Check if there’s enough stock before adding to cart
     if (sizeDetails.stock < 1) {
       toast.error(`Sorry, ${product.name} (${selectedSize}) is out of stock!`);
       return;
@@ -63,7 +69,6 @@ function Dashboard() {
     const selectedSize = cart[productId].selectedSize;
     const sizeDetails = product.sizes[selectedSize];
 
-    // Check if there’s enough stock to increase quantity
     if (cart[productId].quantity >= sizeDetails.stock) {
       toast.error(`Cannot add more ${product.name} (${selectedSize}). Only ${sizeDetails.stock} units in stock!`);
       return;
@@ -85,7 +90,7 @@ function Dashboard() {
       if (updatedCart[productId].quantity > 1) {
         updatedCart[productId].quantity -= 1;
       } else {
-        delete updatedCart[productId]; // Remove item from cart if quantity reaches 0
+        delete updatedCart[productId];
       }
       return updatedCart;
     });
@@ -100,16 +105,88 @@ function Dashboard() {
   const totalItems = Object.values(cart).reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = Object.values(cart).reduce((acc, item) => acc + item.quantity * item.price, 0);
 
-  // Navigate to Checkout Page after updating stock
+  // Navigate to Checkout Page
   const navigate = useNavigate();
-  const handleCheckout = async () => {
+
+  // Show the customer details modal when Checkout is clicked
+  const handleCheckoutClick = () => {
     if (totalItems === 0) {
       toast.error("Your cart is empty!");
       return;
     }
+    setShowCustomerModal(true);
+  };
+
+  // Function to capture the bill as an image and upload to Cloudinary
+  const uploadBillToCloudinary = async () => {
+    try {
+      const canvas = await html2canvas(billRef.current);
+      const imageData = canvas.toDataURL("image/png");
+
+      const formData = new FormData();
+      formData.append("file", imageData);
+      formData.append("upload_preset", "photos");
+
+      const response = await axios.post(
+        "https://api.cloudinary.com/v1_1/dyvf3gayv/image/upload",
+        formData
+      );
+
+      console.log("Cloudinary upload successful, URL:", response.data.secure_url);
+      return response.data.secure_url;
+    } catch (error) {
+      console.error("Error uploading bill to Cloudinary:", error);
+      throw new Error("Failed to upload bill to Cloudinary: " + error.message);
+    }
+  };
+
+  // Save order to Firestore
+  const saveOrderToFirestore = async (cloudinaryUrl) => {
+    try {
+      const billId = `BILL-${Date.now()}`;
+      const orderData = {
+        billId,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        billUrl: cloudinaryUrl,
+        items: Object.values(cart),
+        total: totalPrice,
+        timestamp: new Date(),
+      };
+      console.log("Saving order to Firestore:", orderData);
+      const docRef = await addDoc(collection(db, "orders"), orderData);
+      console.log("Order saved successfully with ID:", docRef.id);
+      return orderData;
+    } catch (error) {
+      console.error("Error saving order to Firestore:", error);
+      throw new Error("Failed to save order to Firestore: " + error.message);
+    }
+  };
+
+  // Handle form submission for customer details
+  const handleCustomerSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!customerName.trim()) {
+      toast.error("Please enter your name.");
+      return;
+    }
+    if (!customerPhone.trim() || !/^\d{10}$/.test(customerPhone)) {
+      toast.error("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      // Update stock for each product in the cart
+      // Save customer details to Firestore
+      await addDoc(collection(db, "customers"), {
+        name: customerName,
+        phone: customerPhone,
+        timestamp: new Date(),
+      });
+
+      // Update stock for each item in the cart
       const updatePromises = Object.values(cart).map(async (item) => {
         const productRef = doc(db, "products", item.id);
         const product = products.find((p) => p.id === item.id);
@@ -117,17 +194,14 @@ function Dashboard() {
         const currentStock = product.sizes[selectedSize].stock;
         const newStock = currentStock - item.quantity;
 
-        // Check if there’s enough stock
         if (newStock < 0) {
           throw new Error(`Insufficient stock for ${item.name} (${selectedSize}). Only ${currentStock} units available.`);
         }
 
-        // Update the stock in Firestore
         await updateDoc(productRef, {
           [`sizes.${selectedSize}.stock`]: newStock,
         });
 
-        // Update the local products state to reflect the new stock
         setProducts((prevProducts) =>
           prevProducts.map((p) =>
             p.id === item.id
@@ -146,39 +220,103 @@ function Dashboard() {
         );
       });
 
-      // Wait for all stock updates to complete
       await Promise.all(updatePromises);
 
-      // Clear the cart after successful stock update
+      // Generate and upload the bill to Cloudinary
+      const cloudinaryUrl = await uploadBillToCloudinary();
+
+      // Save the order to Firestore
+      const orderData = await saveOrderToFirestore(cloudinaryUrl);
+
+      // Clear the cart and modal states after saving the order
       setCart({});
       setCartOpen(false);
+      setShowCustomerModal(false);
+      setCustomerName("");
+      setCustomerPhone("");
 
-      // Store cart in localStorage for the checkout page
-      localStorage.setItem("cartData", JSON.stringify(cart));
+      toast.success("Order processed successfully! Proceeding to checkout...");
 
-      // Show success message
-      toast.success("Stock updated successfully! Proceeding to checkout...");
-
-      // Redirect to checkout page
-      navigate("/checkout");
+      // Navigate to checkout page with order data
+      navigate("/checkout", {
+        state: {
+          cart: cart,
+          customer: { name: customerName, phone: customerPhone },
+          billUrl: cloudinaryUrl,
+          totalPrice: totalPrice,
+        },
+      });
     } catch (error) {
-      console.error("Error updating stock:", error);
-      toast.error(error.message || "Failed to update stock. Please try again.");
+      console.error("Error during checkout:", error);
+      toast.error(error.message || "Failed to process checkout. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Get current date and time for the bill
+  const currentDate = new Date().toLocaleString();
 
   return (
     <div className="main-container">
       <Layout>
+        {/* Hidden Bill Container for html2canvas */}
+        <div className="bill-container" ref={billRef} style={{ position: "absolute", left: "-9999px" }}>
+          <h1 className="store-name">Billingo</h1>
+          <h2 className="bill-title">Bill</h2>
+          <div className="bill-header">
+            <p><strong>Date:</strong> {currentDate}</p>
+            <div className="customer-details">
+              <p><strong>Customer Name:</strong> {customerName || "N/A"}</p>
+              <p><strong>Phone Number:</strong> {customerPhone || "N/A"}</p>
+            </div>
+          </div>
+
+          {Object.values(cart).length === 0 ? (
+            <p className="empty-cart">Your cart is empty.</p>
+          ) : (
+            <>
+              <table className="bill-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Size</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.values(cart).map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td>{item.selectedSize}</td>
+                      <td>{item.quantity}</td>
+                      <td>₹{item.price}</td>
+                      <td>₹{item.quantity * item.price}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <h3 className="total-amount">Grand Total: ₹{totalPrice}</h3>
+            </>
+          )}
+        </div>
+
         {/* Cart Section */}
         <div className="dashboard-header">
-          <button className="cart-button" onClick={toggleCart}>
-            <FaShoppingCart className="me-2" size={18} />
-            Cart ({totalItems})
-          </button>
+          {!cartOpen && (
+            <button className="cart-button" onClick={toggleCart}>
+              <FaShoppingCart className="me-2" size={18} />
+              Cart ({totalItems})
+            </button>
+          )}
 
           {cartOpen && (
             <div className="cart-dropdown">
+              <button className="close-cart-button" onClick={toggleCart}>
+                Close
+              </button>
               {totalItems === 0 ? (
                 <p className="empty-cart">Your cart is empty</p>
               ) : (
@@ -199,13 +337,57 @@ function Dashboard() {
               )}
               <p className="cart-total quant">Total: ₹{totalPrice}</p>
               {totalItems > 0 && (
-                <button className="checkout-button" onClick={handleCheckout}>
-                  Checkout
+                <button className="checkout-button" onClick={handleCheckoutClick} disabled={loading}>
+                  {loading ? "Processing..." : "Checkout"}
                 </button>
               )}
             </div>
           )}
         </div>
+
+        {/* Customer Details Modal */}
+        {showCustomerModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3>Enter Your Details</h3>
+              <form onSubmit={handleCustomerSubmit}>
+                <div className="form-group">
+                  <label htmlFor="customerName">Name</label>
+                  <input
+                    type="text"
+                    id="customerName"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter your name"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="customerPhone">Phone Number</label>
+                  <input
+                    type="tel"
+                    id="customerPhone"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Enter your 10-digit phone number"
+                    pattern="\d{10}"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="modal-buttons">
+                  <button type="button" onClick={() => setShowCustomerModal(false)} disabled={loading}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={loading}>
+                    {loading ? "Processing..." : "Submit"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Product Grid */}
         <div className="products-container">
@@ -222,7 +404,6 @@ function Dashboard() {
                   <h3 className="product-title">{product.name}</h3>
                   <p className="product-id">ID: {product.id}</p>
 
-                  {/* Size Selection */}
                   <select
                     className="product-size-dropdown"
                     value={selectedSize}
@@ -241,11 +422,9 @@ function Dashboard() {
                     ))}
                   </select>
 
-                  {/* Price & Stock */}
                   <p className="product-price">Price: ₹{sizeDetails.price || "N/A"}</p>
                   <p className="product-stock">Stock: {sizeDetails.stock || "N/A"} units</p>
 
-                  {/* Add to Cart */}
                   {cart[product.id] ? (
                     <div className="quantity-control">
                       <button
