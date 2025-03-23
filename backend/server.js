@@ -14,7 +14,6 @@ const requiredEnvVars = [
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
   "TWILIO_PHONE_NUMBER",
-  "API_KEY",
 ];
 const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
 if (missingEnvVars.length > 0) {
@@ -47,13 +46,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // Middleware
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "https://billingo-47713.web.app",
-    methods: ["POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors()); // Allow all origins since authentication is removed
 app.use(express.json());
 
 // Rate limiting
@@ -63,16 +56,6 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later.",
 });
 app.use("/send-sms", limiter);
-
-// API key authentication middleware
-const authenticateApiKey = (req, res, next) => {
-  const apiKey = req.headers["authorization"];
-  if (!apiKey || apiKey !== `Bearer ${process.env.API_KEY}`) {
-    logger.warn(`Unauthorized access attempt to ${req.path} from IP ${req.ip}`);
-    return res.status(401).json({ error: "Unauthorized: Invalid API key" });
-  }
-  next();
-};
 
 // Initialize Twilio client
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -86,7 +69,7 @@ app.get("/health", (req, res) => {
 });
 
 // API endpoint to send SMS
-app.post("/send-sms", authenticateApiKey, async (req, res) => {
+app.post("/send-sms", async (req, res) => {
   const { phoneNumber, billUrl } = req.body;
 
   // Input validation
