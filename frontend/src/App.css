@@ -1,23 +1,31 @@
+/* Root Container */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100%; /* Full width instead of max-width */
+  max-width: 1280px; /* Retain upper limit for large screens */
+  margin: 0 auto; /* Center horizontally */
+  padding: clamp(1rem, 2vw, 2rem); /* Scales between 1rem and 2rem based on viewport */
   text-align: center;
+  box-sizing: border-box; /* Ensure padding doesn’t overflow */
 }
 
+/* Logo Styles */
 .logo {
-  height: 6em;
-  padding: 1.5em;
+  height: clamp(4rem, 10vw, 6rem); /* Scales from 4rem (mobile) to 6rem (desktop) */
+  padding: clamp(0.75rem, 2vw, 1.5rem); /* Responsive padding */
   will-change: filter;
-  transition: filter 300ms;
+  transition: filter 300ms ease; /* Smooth transition */
+  display: inline-block; /* Ensure proper centering */
 }
+
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em #646cffaa); /* Same effect, works on all screens */
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
+/* Logo Spin Animation */
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -27,16 +35,79 @@
   }
 }
 
+/* Animation only for users who prefer motion */
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
 }
 
+/* Card Styles */
 .card {
-  padding: 2em;
+  padding: clamp(1rem, 3vw, 2em); /* Responsive padding */
 }
 
+/* Read-the-Docs Text */
 .read-the-docs {
   color: #888;
+  font-size: clamp(0.875rem, 2vw, 1rem); /* Scales text size */
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1080px) {
+  #root {
+    padding: clamp(0.75rem, 1.5vw, 1.5rem); /* Slightly reduced padding */
+  }
+
+  .logo {
+    height: clamp(3.5rem, 8vw, 5rem); /* Smaller logo for mobile */
+    padding: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  .card {
+    padding: clamp(0.75rem, 2vw, 1.5rem);
+  }
+
+  /* Disable animation on smaller screens for performance */
+  a:nth-of-type(2) .logo {
+    animation: none; /* Remove spin on mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  #root {
+    padding: clamp(0.5rem, 1vw, 1rem);
+  }
+
+  .logo {
+    height: clamp(3rem, 6vw, 4rem);
+    padding: clamp(0.5rem, 1vw, 0.75rem);
+  }
+
+  .card {
+    padding: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  .read-the-docs {
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+  }
+}
+
+@media (max-width: 480px) {
+  #root {
+    padding: clamp(0.25rem, 0.8vw, 0.75rem);
+  }
+
+  .logo {
+    height: clamp(2.5rem, 5vw, 3.5rem);
+    padding: clamp(0.25rem, 0.8vw, 0.5rem);
+  }
+
+  .card {
+    padding: clamp(0.25rem, 1vw, 0.75rem);
+  }
+
+  .read-the-docs {
+    font-size: clamp(0.625rem, 1.2vw, 0.75rem);
+  }
 }
