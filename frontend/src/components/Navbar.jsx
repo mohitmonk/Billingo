@@ -7,11 +7,10 @@ import { BsGrid, BsBox, BsPerson } from "react-icons/bs";
 import { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../index.css";
-import "../pages/Cart"
 import billingoLogo from "../assets/billingo1.png";
 
 
-const Navbar = ({ toggleSidebar }) => {
+const Navbar = ({ onToggleSidebar}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -47,49 +46,54 @@ const Navbar = ({ toggleSidebar }) => {
   ];
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow fixed-top w-100">
-      <div className="container-fluid">
-        {/* Sidebar Toggle & Branding */}
-        <div className="d-flex align-items-center">
-          <button className="btn btn-outline-light me-2" onClick={toggleSidebar}>
-            <FaBars />
+    <nav className="navbar navbar-dark bg-dark shadow fixed-top w-100">
+    <div className="container-fluid d-flex align-items-center justify-content-between px-2">
+      {/* Sidebar Toggle & Branding */}
+      <div className="d-flex align-items-center gap-2">
+        <button
+          className="btn btn-outline-light p-2"
+          onClick={() => {
+            console.log("Toggle button clicked");
+            onToggleSidebar();
+          }}
+        >
+          <FaBars size={18} />
+        </button>
+        <img
+          src={billingoLogo}
+          alt="Billingo"
+          id="logo2"
+          style={{ height: "36px", cursor: "pointer" }}
+          onClick={() => navigate("/home")}
+        />
+      </div>
+
+      {/* Navbar Items */}
+      <div className="d-flex align-items-center gap-2 gap-lg-3">
+        {navItems.map((item, index) => (
+          <button
+            key={index}
+            className={`btn btn-link nav-btn d-flex flex-column align-items-center text-decoration-none text-light ${
+              location.pathname === item.path ? "active-tab" : "inactive-tab"
+            }`}
+            onClick={() => navigate(item.path)}
+          >
+            {item.icon}
+            <small className="nav-text">{item.name}</small>
           </button>
-          <img
-            src={billingoLogo}
-            alt="Billingo"
-            id="logo2"
-            style={{ height: "40px", cursor: "pointer" }}
-            onClick={() => navigate("/dashboard")}
-          />
-        </div>
+        ))}
 
-        {/* Navbar Items */}
-        <div className="d-flex ms-auto gap-4 align-items-center">
-          {navItems.map((item, index) => (
-            <button
-              key={index}
-              className={`btn btn-link d-flex flex-column align-items-center text-decoration-none ${
-                location.pathname === item.path ? "active-tab" : "inactive-tab"
-              }`}
-              onClick={() => navigate(item.path)}
-            >
-              {item.icon}
-              <small>{item.name}</small>
-            </button>
-          ))}
-
-          {/* User Dropdown */}
-          <div className="dropdown position-relative" ref={dropdownRef}>
-            <button
-              className="btn btn-outline-light dropdown-toggle"
-              onClick={(event) => {
-                event.stopPropagation();
-                setDropdownOpen(!dropdownOpen);
-              }}
-            >
-              <FaUserCircle className="me-2" size={22} />
-            </button>
-
+        {/* User Dropdown */}
+        <div className="dropdown position-relative" ref={dropdownRef}>
+          <button
+            className="btn btn-outline-light p-2"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDropdownOpen(!dropdownOpen);
+            }}
+          >
+            <FaUserCircle size={20} />
+          </button>
             <ul
               className={`dropdown-menu dropdown-menu-end ${dropdownOpen ? "show" : ""}`}
               style={{ right: 0 }}
