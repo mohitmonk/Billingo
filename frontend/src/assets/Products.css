@@ -16,6 +16,7 @@
 }
 
 .products-container {
+  margin-top: 20px;
   padding: 20px;
   display: flex;
   flex-direction: column;
