@@ -230,3 +230,8 @@
     margin-bottom: 0.75rem;
   }
 }
+@media (max-width: 480px) {
+#logo{
+  margin-left: 5rem;
+}
+}
