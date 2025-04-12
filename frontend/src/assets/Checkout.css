@@ -1,11 +1,9 @@
-/* Checkout Page Styles */
 .checkout-container {
-    max-width: 900px;
-    margin: 20px auto;
+    max-width: 100%;
     padding: 20px;
     background: #fff;
-    color: #333;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgb(255, 255, 255);
     border-radius: 8px;
   }
   
@@ -17,7 +15,6 @@
     color: #333;
   }
   
-  /* Cart Items Table */
   .cart-table {
     width: 100%;
     border-collapse: collapse;
@@ -50,8 +47,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    background: #f5f5f5; /* Light background to match the image */
+    min-height: 72vh;
+    background: #f5f5f5;
     padding: 20px;
   }
   
@@ -64,24 +61,18 @@
     max-width: 500px;
     text-align: center;
   }
-  
-  /* Store Name */
   .store-name {
     font-size: 2rem;
     font-weight: bold;
     color: #333;
     margin-bottom: 10px;
   }
-  
-  /* Bill Title */
   .bill-title {
     font-size: 1.5rem;
     font-weight: bold;
     color: #333;
     margin-bottom: 15px;
   }
-  
-  /* Bill Header (Date and Customer Details) */
   .bill-header {
     margin-bottom: 20px;
     text-align: left;
@@ -96,8 +87,6 @@
   .customer-details p {
     margin: 5px 0;
   }
-  
-  /* Bill Table */
   .bill-table {
     width: 100%;
     border-collapse: collapse;
@@ -121,8 +110,6 @@
   .bill-table td {
     text-align: center;
   }
-  
-  /* Total Amount */
   .total-amount {
     font-size: 1.2rem;
     font-weight: bold;
@@ -130,19 +117,15 @@
     margin: 15px 0;
     text-align: right;
   }
-  
-  /* Action Buttons */
   .bill-actions {
     display: flex;
-    justify-content: space-between;
     gap: 10px;
     margin-top: 20px;
+    margin-left: 15rem;
   }
-  
   .print-btn,
   .sms-btn,
   .back-button {
-    padding: 10px 20px;
     border: none;
     border-radius: 4px;
     font-size: 1rem;
@@ -176,15 +159,12 @@
   .back-button:hover {
     background: #b02a37;
   }
-  
-  /* Empty Cart Message */
   .empty-cart {
     font-size: 1rem;
     color: #666;
     margin: 20px 0;
   }
   
-  /* Print Styles */
   @media print {
     .bill-container {
       box-shadow: none;
@@ -194,16 +174,16 @@
     }
   
     .bill-actions {
-      display: none; /* Hide buttons when printing */
+      display: none; 
+      margin-left: 15rem;
     }
   
     .bill-header,
     .bill-table,
     .total-amount {
-      color: #000; /* Ensure text is black for printing */
+      color: #000;
     }
   }
-  /* Total Section */
   .total-section {
     text-align: right;
     font-size: 18px;
@@ -211,7 +191,6 @@
     margin-top: 15px;
   }
   
-  /* Checkout Button */
   .checkout-button {
     width: 100%;
     padding: 12px;
@@ -238,8 +217,11 @@
     background-color: rgb(42, 163, 18);
     margin: 3px;
   }
-  
-  /* Responsive Design */
+  @media (max-width: 1080px){
+    .bill-actions{
+      margin-left: 15rem;
+    }
+  }
   @media (max-width: 768px) {
     .checkout-container {
       width: 95%;
@@ -255,4 +237,24 @@
       font-size: 16px;
     }
   }
+  @media (max-width: 480px) {
+    .bill-container {
+      padding: clamp(0.5rem, 1vw, 1rem);
+    }
   
+    .store-name {
+      font-size: clamp(1.2rem, 2vw, 1.5rem);
+    }
+  
+    .bill-title {
+      font-size: clamp(1rem, 1.5vw, 1.2rem);
+    }
+  
+    .bill-table td,
+    .cart-table td {
+      font-size: clamp(0.75rem, 1vw, 0.85rem);
+    }
+    .bill-actions{
+      margin-left: 0.8rem;
+    }
+  }
