@@ -1,19 +1,18 @@
 .customers-container {
-  padding: clamp(1rem, 2vw, 2rem); /* Scales padding */
+  padding: clamp(1rem, 2vw, 2rem); 
   max-width: 1200px;
   margin: 0 auto;
-  min-height: calc(100vh - 56px); /* Adjust for navbar height */
+  min-height: calc(100vh - 56px); 
   box-sizing: border-box;
 }
 
 .customers-container h2 {
-  font-size: clamp(1.25rem, 3vw, 1.5rem); /* Responsive font size */
+  font-size: clamp(1.25rem, 3vw, 1.5rem); 
   color: #fff;
   margin-bottom: clamp(1rem, 2vw, 1.5rem);
   text-align: center;
 }
 
-/* Loading and No Customers States */
 .loading-text,
 .no-customers {
   text-align: center;
@@ -23,13 +22,9 @@
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
 }
-
-/* Table Wrapper for Overflow */
 .customers-table-wrapper {
-  overflow-x: auto; /* Horizontal scroll if needed */
+  overflow-x: auto; 
 }
-
-/* Table Styles */
 .customers-table {
   width: 100%;
   border-collapse: collapse;
@@ -40,7 +35,7 @@
 
 .customers-table th,
 .customers-table td {
-  padding: clamp(0.5rem, 1.5vw, 1rem); /* Responsive padding */
+  padding: clamp(0.5rem, 1.5vw, 1rem); 
   text-align: center;
   font-size: clamp(0.8rem, 1.5vw, 0.9rem);
 }
@@ -59,17 +54,16 @@
 }
 
 .customers-table tr:hover {
-  background: #f5f5f5; /* Hover effect */
+  background: #f5f5f5; 
 }
 
-/* Responsive Table */
 @media (max-width: 768px) {
   .customers-table {
-    display: block; /* Stack table as block */
+    display: block; 
   }
 
   .customers-table thead {
-    display: none; /* Hide header on mobile */
+    display: none; 
   }
 
   .customers-table tbody,
@@ -109,6 +103,7 @@
 @media (max-width: 480px) {
   .customers-container {
     padding: clamp(0.7rem, 1vw, 1rem);
+    margin-top: 5rem;
   }
 
   .customers-table td {
