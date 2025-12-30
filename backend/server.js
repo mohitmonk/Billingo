@@ -1,120 +1,110 @@
-import express from "express";
-import twilio from "twilio";
-import cors from "cors";
-import dotenv from "dotenv";
-import rateLimit from "express-rate-limit";
-import winston from "winston";
-import validator from "validator";
+const express = require("express");
+const twilio = require("twilio");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const axios = require("axios");
+const crypto = require("crypto");
 
-// Load environment variables
 dotenv.config();
 
-// Validate required environment variables
-const requiredEnvVars = [
-  "TWILIO_ACCOUNT_SID",
-  "TWILIO_AUTH_TOKEN",
-  "TWILIO_PHONE_NUMBER",
-];
-const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
-if (missingEnvVars.length > 0) {
-  console.error(`Missing required environment variables: ${missingEnvVars.join(", ")}`);
-  process.exit(1);
-}
-
 const app = express();
-const port = process.env.PORT || 5000; // Use Render's assigned port
+const port = process.env.PORT || 5000;
 
-// Enable trust proxy to handle X-Forwarded-For header correctly
-app.set("trust proxy", 1); // Trust the first proxy (Render)
-
-// Configure logging with winston
-const logger = winston.createLogger({
-  level: "info",
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: "error.log", level: "error" }),
-    new winston.transports.File({ filename: "combined.log" }),
-  ],
-});
-
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.simple(),
-    })
-  );
-}
-
-// Middleware
-app.use(cors()); // Allow all origins (no authentication)
+app.use(cors());
 app.use(express.json());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
-});
-app.use("/send-sms", limiter);
+/* ================= TWILIO ================= */
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
-// Initialize Twilio client
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
-const client = twilio(accountSid, authToken);
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", message: "Server is running" });
-});
-
-// API endpoint to send SMS
+/* ================= SEND SMS ================= */
 app.post("/send-sms", async (req, res) => {
   const { phoneNumber, billUrl } = req.body;
 
-  // Input validation
   if (!phoneNumber || !billUrl) {
-    logger.warn(`Missing required fields: phoneNumber=${phoneNumber}, billUrl=${billUrl}`);
-    return res.status(400).json({ error: "Phone number and bill URL are required." });
-  }
-
-  // Validate phone number (should start with + followed by country code and number)
-  if (!validator.isMobilePhone(phoneNumber, "any", { strictMode: true })) {
-    logger.warn(`Invalid phone number: ${phoneNumber}`);
-    return res.status(400).json({ error: "Invalid phone number format. Use E.164 format (e.g., +91xxxxxxxxxx)." });
-  }
-
-  // Validate bill URL
-  if (!validator.isURL(billUrl)) {
-    logger.warn(`Invalid bill URL: ${billUrl}`);
-    return res.status(400).json({ error: "Invalid bill URL format." });
+    return res.status(400).json({ error: "Phone number and bill URL required" });
   }
 
   try {
-    const message = await client.messages.create({
+    const msg = await client.messages.create({
       body: `Here is your digital bill: ${billUrl}`,
-      from: twilioNumber,
+      from: process.env.TWILIO_PHONE_NUMBER,
       to: phoneNumber,
     });
 
-    logger.info(`SMS sent successfully: SID=${message.sid}, To=${phoneNumber}`);
-    res.status(200).json({ message: "SMS sent successfully!", sid: message.sid });
-  } catch (error) {
-    logger.error(`Error sending SMS to ${phoneNumber}: ${error.message}`);
-    res.status(500).json({ error: "Failed to send SMS: " + error.message });
+    res.status(200).json({ message: "SMS sent", sid: msg.sid });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "SMS failed" });
   }
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  logger.error(`Unhandled error: ${err.message}, Path: ${req.path}, IP: ${req.ip}`);
-  res.status(500).json({ error: "Internal server error" });
+/* ================= CASHFREE CREATE ORDER ================= */
+app.post("/create-cashfree-order", async (req, res) => {
+  try {
+    const { amount, customerName, customerPhone } = req.body;
+
+    const orderId = "ORDER_" + Date.now();
+
+    const response = await axios.post(
+      "https://sandbox.cashfree.com/pg/orders",
+      {
+        order_id: orderId,
+        order_amount: amount,
+        order_currency: "INR",
+        customer_details: {
+          customer_id: customerPhone,
+          customer_name: customerName,
+          customer_phone: customerPhone,
+        },
+      },
+      {
+        headers: {
+          "x-client-id": process.env.CASHFREE_APP_ID,
+          "x-client-secret": process.env.CASHFREE_SECRET_KEY,
+          "x-api-version": "2023-08-01",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.status(200).json({
+      payment_session_id: response.data.payment_session_id,
+      order_id: orderId,
+    });
+  } catch (error) {
+    console.error("Cashfree order error:", error.response?.data || error);
+    res.status(500).json({ error: "Cashfree order creation failed" });
+  }
 });
 
-// Start the server
+/* ================= CASHFREE WEBHOOK ================= */
+app.post("/cashfree/webhook", (req, res) => {
+  const signature = req.headers["x-webhook-signature"];
+  const rawBody = JSON.stringify(req.body);
+
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.CASHFREE_SECRET_KEY)
+    .update(rawBody)
+    .digest("base64");
+
+  if (signature !== expectedSignature) {
+    return res.status(400).send("Invalid signature");
+  }
+
+  const event = req.body;
+
+  if (event.type === "PAYMENT_SUCCESS") {
+    console.log("Payment successful:", event.data.order.order_id);
+    // TODO: Save payment status in DB / Firestore
+  }
+
+  res.status(200).send("Webhook received");
+});
+
+/* ================= START SERVER ================= */
 app.listen(port, () => {
-  logger.info(`Server running on port ${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
